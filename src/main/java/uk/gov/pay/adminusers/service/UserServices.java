@@ -92,10 +92,10 @@ public class UserServices {
     @Transactional
     public Optional<User> authenticate(String username, String password) {
         Optional<UserEntity> userEntityOptional = userDao.findByUsername(username);
-        logger.warn("Attempting to find user {}", username);
 
         if (userEntityOptional.isPresent()) { //interestingly java cannot map/orElseGet this block properly, without getting the compiler confused. :)
             UserEntity userEntity = userEntityOptional.get();
+
             if (passwordHasher.isEqual(password, userEntity.getPassword())) {
                 if (userEntity.isDisabled()) {
                     logger.warn("user {} attempted a valid login, but account currently locked", username);
@@ -104,19 +104,26 @@ public class UserServices {
                 userEntity.setLoginCounter(0);
                 userEntity.setUpdatedAt(ZonedDateTime.now(ZoneId.of("UTC")));
                 userDao.merge(userEntity);
+                logger.info("Authenticate: successful authentication for user {}", userEntity.getId());
+
                 return Optional.of(linksBuilder.decorate(userEntity.toUser()));
             } else {
                 userEntity.setLoginCounter(userEntity.getLoginCounter() + 1);
                 userEntity.setUpdatedAt(ZonedDateTime.now(ZoneId.of("UTC")));
+
                 //currently we can only unlock an account by script, manually
-                userEntity.setDisabled(userEntity.getLoginCounter() >= loginAttemptCap);
-                userDao.merge(userEntity);
-                if (userEntity.isDisabled()) {
-                    logger.warn("user {} attempted a invalid login, but account currently locked", username);
+                if (userEntity.getLoginCounter() >= loginAttemptCap) {
+                    logger.warn("user {} locked out due to too many login attempts ({})", userEntity.getId(), userEntity.getLoginCounter());
+                    userEntity.setDisabled(true);
+                } else {
+                    logger.warn("user {} invalid login, attempt {} of {}", user.getId(), userEntity.getLoginCounter(), loginAttemptCap);
                 }
+
+                userDao.merge(userEntity);
                 return Optional.empty();
             }
         } else {
+            logger.warn("Authenticate: username not found");
             return Optional.empty();
         }
     }
