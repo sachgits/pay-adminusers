@@ -41,28 +41,28 @@ public class ForgottenPasswordServices {
     }
 
     public void create(String username) {
-        //try {
-        //    recorder.beginSegment("pay-adminusers");
-        Optional<UserEntity> userOptional = userDao.findByUsername(username);
-        if (userOptional.isPresent()) {
-            UserEntity userEntity = userOptional.get();
-            ForgottenPasswordEntity forgottenPasswordEntity = new ForgottenPasswordEntity(randomUuid(), ZonedDateTime.now(), userEntity);
-            forgottenPasswordDao.persist(forgottenPasswordEntity);
-            String forgottenPasswordUrl = fromUri(selfserviceBaseUrl).path(SELFSERVICE_FORGOTTEN_PASSWORD_PATH).path(forgottenPasswordEntity.getCode()).build().toString();
-            notificationService.sendForgottenPasswordEmail(userEntity.getEmail(), forgottenPasswordUrl)
-                    .thenAcceptAsync(notificationId -> logger.info("sent forgot password email successfully user [{}], notification id [{}]", userEntity.getExternalId(), notificationId))
-                    .exceptionally(exception -> {
-                        logger.error(format("error sending forgotten password email for user [%s]", userEntity.getExternalId()), exception);
-                        return null;
-                    });
-        } else {
-            logger.warn("Attempted forgotten password for non existent user {}", username);
-            throw AdminUsersExceptions.notFoundException();
+        try {
+            recorder.beginSegment("pay-adminusers");
+            Optional<UserEntity> userOptional = userDao.findByUsername(username);
+            if (userOptional.isPresent()) {
+                UserEntity userEntity = userOptional.get();
+                ForgottenPasswordEntity forgottenPasswordEntity = new ForgottenPasswordEntity(randomUuid(), ZonedDateTime.now(), userEntity);
+                forgottenPasswordDao.persist(forgottenPasswordEntity);
+                String forgottenPasswordUrl = fromUri(selfserviceBaseUrl).path(SELFSERVICE_FORGOTTEN_PASSWORD_PATH).path(forgottenPasswordEntity.getCode()).build().toString();
+                notificationService.sendForgottenPasswordEmail(userEntity.getEmail(), forgottenPasswordUrl)
+                        .thenAcceptAsync(notificationId -> logger.info("sent forgot password email successfully user [{}], notification id [{}]", userEntity.getExternalId(), notificationId))
+                        .exceptionally(exception -> {
+                            logger.error(format("error sending forgotten password email for user [%s]", userEntity.getExternalId()), exception);
+                            return null;
+                        });
+            } else {
+                logger.warn("Attempted forgotten password for non existent user {}", username);
+                throw AdminUsersExceptions.notFoundException();
+            }
         }
-        //}
-        //finally {
-        //    recorder.endSegment();
-        //}
+        finally {
+            recorder.endSegment();
+        }
     }
 
     public Optional<ForgottenPassword> findNonExpired(String code) {
