@@ -3,7 +3,7 @@ package uk.gov.pay.adminusers.app.config;
 import org.eclipse.persistence.config.SessionCustomizer;
 import org.eclipse.persistence.sessions.DatabaseLogin;
 import org.eclipse.persistence.sessions.Session;
-import uk.gov.pay.adminusers.app.util.XRaySessionProfiler;
+//import uk.gov.pay.adminusers.app.util.XRaySessionProfiler;
 
 public class AdminUsersSessionCustomiser implements SessionCustomizer {
 
